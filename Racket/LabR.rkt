@@ -1,4 +1,3 @@
-;Author: Carlos B. Cerna
 #lang racket
 ;(provide lookup)
 (provide Leaf)
