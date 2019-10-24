@@ -1,5 +1,5 @@
 #lang racket
-;(provide lookup)
+(provide lookup)
 (provide Leaf)
 (provide Node)
 (provide average)
