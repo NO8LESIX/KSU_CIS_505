@@ -6,8 +6,8 @@ This is a skeleton, with 9 places where code needs to be changed/inserted.
 Each such place is marked with "CHANGE #k" where k is a number,
 indicating the suggested order in which to make the changes.
 
- #1  how to evaluate a number
- #2  how to execute a sequence of commands
+ #1  how to evaluate a number - Done?
+ #2  how to execute a sequence of commands - Done?
        (make sure it is in the right order, and that each command has an effect)
  #3  how to handle an assignment
        (observe that LeftEval computes a location)
@@ -20,11 +20,12 @@ indicating the suggested order in which to make the changes.
        (remember which integers are considered 'true')
  #8  how to execute a "while" loop
        (hint: the question text mentions an equivalent command)
+	Use if and a recursive if?
  #9  how to calculate the 'displacement', that is how far a given array element
         is located from the start of the array
        (the current code works only for 1-dimensional arrays,
          and doesn't catch out-of-bounds errors).
-
+	Use an if statement?
 *)
 
 
@@ -64,6 +65,8 @@ datatype Prog =
 exception NotDeclared of string
 exception BoundsError of string
 exception ArrayDiscrepancy of string
+exception EmptyStream of string
+exception IndexOutOfBounds of string
 (* CHANGE #4 *)
 
 (* ENVIRONMENTS and STORES *)
@@ -107,13 +110,17 @@ fun calculate_displacement id indices bounds = case (indices, bounds) of
    ([],[]) => 0
  | ((index1 :: indices'), (bound1 :: bounds')) =>
            index1 (* CHANGE #9 *)
+		   (* check the total size*)
+		(*
+		    
+		*)
  | _ => raise (ArrayDiscrepancy id)
 
 (* EVALUATION OF EXPRESSIONS
      ExpEval: Exp -> Env -> Store -> Val
 *)
 
-fun ExpEval (NumE n) _ _ = 27 (* CHANGE #1 *)
+fun ExpEval (NumE n) _ _ = n (* 27 : CHANGE #1 *)
 |   ExpEval (GetE lhs) env sto = StoLookup sto (LeftEval lhs env sto)
 |   ExpEval (AddE(exp1,exp2)) env sto =
       let val v1 = ExpEval exp1 env sto
@@ -157,26 +164,45 @@ type OutputStream = Value list
 type RunTimeState = Store * InputStream * OutputStream
 
 (*
-CommExec: Comm -> Env -> RunTimeState -> RunTimeState
+	CommExec: Comm -> Env -> RunTimeState -> RunTimeState
 *)
 
 fun CommExec SkipC env state = state
 |   CommExec (SeqC(cmd1,cmd2)) env state = (* CHANGE #2 *)
       let val state1 = CommExec cmd2 env state
-          val state2 = CommExec cmd1 env state
+          val state2 = CommExec cmd1 env state1
        in state2 end
 |   CommExec (IfC(exp,cmd1,cmd2)) env state = (* CHANGE #7 *)
           CommExec cmd1 env state
+		(*
+		evaluate expression in a conditional?
+		execute cmd1 if the env or state allows for it?
+		if(exp)...
+		then... evaluate the cmd1, with the current state.
+		else... do nothing and pass a skip to the state?
+		*)
 |   CommExec (WhileC(exp,cmd)) env state = (* CHANGE #8 *)
-          state
+          (*
+		  if((ExpEval exp) != cmd) then (CommExec ())?
+		  
+		  if (Expression) {Command; while Expression {Ccmmand}} {skip}?
+		  *)
+		  state
 |   CommExec (AssignC(lhs, rhs)) env (sto,inp,outp) = (* CHANGE #3 *)
-          (sto,inp,outp)
+          (* Use lefteval here somehow?
+		  LeftEval(sto inp out)? 
+		  assign L to location
+		  ( (InitSto lhs) (rhs) (outp))
+		  assign R to value		  
+		  You need to return a RunTimeState!
+		  *)
+		  (sto,inp,outp)
 |   CommExec (OutputC exp) env (sto,inp,outp) =
       let val v = ExpEval exp env sto
        in (sto, inp, (v::outp))   (* we eventually reverse the order *)
       end
 |   CommExec (InputC lhs) env (sto,inp,outp) = (* CHANGE #6 *)
-       (sto, inp, outp)  
+       (sto, inp, outp)
 
 (* RUNNING THE PROGRAM *)
 
@@ -195,4 +221,7 @@ fun Interpret prog inp = ProgRun (parse prog) inp
          (print ("*** error: "^x^" declared with a zero bound\n"); [0])
     | (ArrayDiscrepancy x) =>
          (print ("*** error: "^x^" not used with same dimensions as declared\n"); [0])
-    
+	| (EmptyStream x) =>
+		(print ("*** error: stream is empty!\n"); [0])
+	| (IndexOutOfBounds x) => 
+		(print ("*** error: "^x^" is not within the declared dimensions\n"); [0])
