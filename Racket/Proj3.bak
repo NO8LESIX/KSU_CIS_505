@@ -244,24 +244,28 @@
 (define (eval exp env)
    (cond
       [(IdentExp? exp)
-       (IdentExp (eval (lookup-env env (IdentExp-var exp))))]  ;;; CHANGE #1
+       NumVal (eval (IdentExp-var exp) env)]
+       ;(NumVal 17 )]   ;;; CHANGE #1
+;;;          (NumVal lookup-env env exp )]   ;;; CHANGE #1
       [(NumExp? exp) 
           (NumVal (NumExp-num exp))]
       [(StringExp? exp) 
           (StringVal (StringExp-string exp))]
       [(LambdaExp? exp)
-       (eval (ClosureVal (LambdaExp-formal exp) (LambdaExp-body exp) env) env)];;; CHANGE #2 finished
+       (eval (ClosureVal  (LambdaExp-formal) exp env))];;; CHANGE #2
       [(ApplyExp? exp)
           (let ([v1 (eval (ApplyExp-fun exp) env)])
              (cond
                 [(ClosureVal? v1)
                    (let ([v2 (eval (ApplyExp-arg exp) env)])
-                     (eval (ClosureVal-body v1) (extend-env (ClosureVal-formal v1 v2 ClosureVal-env v1))))];;; CHANGE #3 finished?
+                     ;(eval (ClosureVal-body v1) (extend env (ClosureVal-formal v1 v2 ClosureVal-env v1))))]
+                     v2)]  ;;; CHANGE #3
                 [(NumVal? v1) (display "integer applied as a function\n")]
                 [(StringVal? v1) (display "string applied as a function\n")]))]
       [(LetExp? exp)
-          (eval (ApplyExp (LambdaExp (LetExp-id exp) (LetExp-body exp))
-                          (LetExp-body exp))  ;;; CHANGE #4 incorrect output, revise
+          (eval (ApplyExp (LambdaExp "w" (LetExp-body exp))
+                          ;apply exp
+                          (NumExp 19))  ;;; CHANGE #4
                  env)]
       [(CondExp? exp)
           (let ([v (eval (CondExp-test exp) env)])         
@@ -275,7 +279,8 @@
                [(and (NumVal? v1) (NumVal? v2))
                    (NumVal (+ (NumVal-num v1) (NumVal-num v2)))]
                [(and (StringVal? v1) (StringVal? v2))
-                (StringVal (string-append PlusExp-exp1 PlusExp-exp2))] ;;; CHANGE #7 Finished
+                (string-append v1 v2)]
+                  ; (StringVal "not this!")] ;;; CHANGE #7
                [else (display "operands to '+' must be either both numbers or both strings\n")]))]
       [(MinusExp? exp)
           (let ([v1 (eval (MinusExp-exp1 exp) env)]
@@ -284,7 +289,6 @@
                [(and (NumVal? v1) (NumVal? v2))
                    (NumVal (- (NumVal-num v1) (NumVal-num v2)))]
                [(and (StringVal? v1) (StringVal? v2))
-                ;(StringVal (string-replace v1 v2 ""))]
                    (StringVal "something else!")] ;;; CHANGE #8
               ))]
       [(TimesExp? exp)
