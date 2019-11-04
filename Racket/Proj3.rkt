@@ -189,9 +189,9 @@
             [(CondT? tk)
                (let*-values ( ;;; CHANGE #5
                   [(e1 tks1) (parExp tks0)]
-        	  [(e2 tks2) (parExp tks0)]
-        	  [(e3 tks3) (parExp tks0)])
-		 (values (CondExp e2 e2 e3) tks2))]
+        	  [(e2 tks2) (parExp tks1)]
+        	  [(e3 tks3) (parExp tks2)])
+		 (values (CondExp e2 e2 e3) tks3))]
  	    [(PlusT? tk)
                (let*-values (
                   [(e1 tks1) (parExp tks0)]
@@ -222,6 +222,24 @@
 
 ; === evaluating (abstract) syntax
 
+; --- helper methods
+
+(define (string-replicate n s)
+  (cond
+    [(< n 1) "number of duplications must be 1 or greater"]
+    [(= n 1) s]
+    [else (string-append s (string-replicate (- n 1) s))]
+    )
+  )
+(define (string-sub s1 list2)
+  (cond
+    [(null? s1) "Cannot subtract s2 because null"]
+    [(null? list2) s1]
+    [(eq? s1 "") s1]
+    [else (string-sub (string-replace s1 (first list2) "") (rest list2))]
+    )
+  )
+
 ; --- values
 
 (struct NumVal (num))
@@ -244,30 +262,36 @@
 (define (eval exp env)
    (cond
       [(IdentExp? exp)
-       (IdentExp (eval (lookup-env env (IdentExp-var exp))))]  ;;; CHANGE #1
+       (lookup-env env (IdentExp-var exp))]  ;;; CHANGE #1 finished
       [(NumExp? exp) 
           (NumVal (NumExp-num exp))]
       [(StringExp? exp) 
           (StringVal (StringExp-string exp))]
       [(LambdaExp? exp)
-       (eval (ClosureVal (LambdaExp-formal exp) (LambdaExp-body exp) env) env)];;; CHANGE #2 finished
+       (ClosureVal (LambdaExp-formal exp) (LambdaExp-body exp) env)];;; CHANGE #2 finished
       [(ApplyExp? exp)
           (let ([v1 (eval (ApplyExp-fun exp) env)])
              (cond
                 [(ClosureVal? v1)
                    (let ([v2 (eval (ApplyExp-arg exp) env)])
-                     (eval (ClosureVal-body v1) (extend-env (ClosureVal-formal v1 v2 ClosureVal-env v1))))];;; CHANGE #3 finished?
+                     (eval (ClosureVal-body v1) (extend-env (ClosureVal-formal v1) v2 (ClosureVal-env v1)))
+                     )
+                   ];;; CHANGE #3 finished?
                 [(NumVal? v1) (display "integer applied as a function\n")]
                 [(StringVal? v1) (display "string applied as a function\n")]))]
       [(LetExp? exp)
           (eval (ApplyExp (LambdaExp (LetExp-id exp) (LetExp-body exp))
-                          (LetExp-body exp))  ;;; CHANGE #4 incorrect output, revise
+                          (LetExp-exp0 exp))  ;;; CHANGE #4 finished?
                  env)]
       [(CondExp? exp)
           (let ([v (eval (CondExp-test exp) env)])         
              (if (NumVal? v) ;;; CHANGE #6
                  (eval (CondExp-exp1 exp) env)
-                 (eval (CondExp-exp2 exp) env)))]
+                 (eval (CondExp-exp2 exp) env))
+             (if (StringVal? v) ;;; CHANGE #6
+                 (eval (CondExp-exp1 exp) env)
+                 (eval (CondExp-exp2 exp) env))
+            )]
       [(PlusExp? exp)
           (let ([v1 (eval (PlusExp-exp1 exp) env)]
                 [v2 (eval (PlusExp-exp2 exp) env)])
@@ -275,7 +299,7 @@
                [(and (NumVal? v1) (NumVal? v2))
                    (NumVal (+ (NumVal-num v1) (NumVal-num v2)))]
                [(and (StringVal? v1) (StringVal? v2))
-                (StringVal (string-append PlusExp-exp1 PlusExp-exp2))] ;;; CHANGE #7 Finished
+                (StringVal (string-append (StringVal-str v1) (StringVal-str v2)))] ;;; CHANGE #7 Finished
                [else (display "operands to '+' must be either both numbers or both strings\n")]))]
       [(MinusExp? exp)
           (let ([v1 (eval (MinusExp-exp1 exp) env)]
@@ -284,8 +308,9 @@
                [(and (NumVal? v1) (NumVal? v2))
                    (NumVal (- (NumVal-num v1) (NumVal-num v2)))]
                [(and (StringVal? v1) (StringVal? v2))
-                ;(StringVal (string-replace v1 v2 ""))]
-                   (StringVal "something else!")] ;;; CHANGE #8
+                (StringVal (string-sub (StringVal-str v1) (string-split(StringVal-str v2) "")))]
+               [else (display "operands to '-' must be either both numbers or both strings\n")]
+               ;(StringVal "something else!")] ;;; CHANGE #8
               ))]
       [(TimesExp? exp)
           (let ([v1 (eval (TimesExp-exp1 exp) env)]
@@ -294,8 +319,15 @@
                 (cond
                    [(NumVal? v2)
                        (NumVal (* (NumVal-num v1) (NumVal-num v2)))]
+                   [(StringVal? v2)
+                    (StringVal (string-replicate (NumVal-num v1) (StringVal-str v2)))]
+                   [(ClosureVal? v2)
+                    (ClosureVal (ClosureVal-formal v2) (TimesExp-exp1 exp) (ClosureVal-env v2))
+                    ;(eval (ClosureVal-formal v2) (extend-env (ClosureVal-formal v2) v1 (ClosureVal-env v1))
+                    ]
                    [else  ;;; CHANGE #9
-                       (NumVal 27)]
+                       (display "operands to v2 of '*' must be either a number, string, or function\n")
+                       ]
                 )
                 (display "the first operand to '*' must be a number\n")))]
  ))
