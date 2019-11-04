@@ -187,7 +187,7 @@
                   [(e2 tks3) (parExp tks2)])
         	 (values (LetExp id e1 e2) tks3))]
             [(CondT? tk)
-               (let*-values ( ;;; CHANGE #5
+               (let*-values ( ;;; CHANGE #5 something is wrong, but I can't figure out what
                   [(e1 tks1) (parExp tks0)]
         	  [(e2 tks2) (parExp tks1)]
         	  [(e3 tks3) (parExp tks2)])
@@ -322,8 +322,11 @@
                    [(StringVal? v2)
                     (StringVal (string-replicate (NumVal-num v1) (StringVal-str v2)))]
                    [(ClosureVal? v2)
-                    (ClosureVal (ClosureVal-formal v2) (TimesExp-exp1 exp) (ClosureVal-env v2))
+                    (ClosureVal (ClosureVal-formal v2) (TimesExp-exp1 exp) env)
+                    ;(ClosureVal (ClosureVal-formal v2) (TimesExp-exp1 (eval (ClosureVal-body v2) v1)) env)
                     ;(eval (ClosureVal-formal v2) (extend-env (ClosureVal-formal v2) v1 (ClosureVal-env v1))
+                    ;(ClosureVal (LambdaExp-formal exp) (LambdaExp-body exp) env
+                    ;I am at a lost to what was the correct solution is.
                     ]
                    [else  ;;; CHANGE #9
                        (display "operands to v2 of '*' must be either a number, string, or function\n")
