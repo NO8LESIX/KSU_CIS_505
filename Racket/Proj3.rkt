@@ -323,7 +323,7 @@
                     (StringVal (string-replicate (NumVal-num v1) (StringVal-str v2)))]
                    [(ClosureVal? v2)
                     (ClosureVal (ClosureVal-formal v2) (TimesExp-exp1 exp) env)
-                    ;(ClosureVal (ClosureVal-formal v2) (TimesExp-exp1 (eval (ClosureVal-body v2) v1)) env)
+                    ;(ClosureVal (ClosureVal-formal v2) (TimesExp-exp1 (eval (exp v1) (ClosureVal-env v2)) env))
                     ;(eval (ClosureVal-formal v2) (extend-env (ClosureVal-formal v2) v1 (ClosureVal-env v1))
                     ;(ClosureVal (LambdaExp-formal exp) (LambdaExp-body exp) env
                     ;I am at a lost to what was the correct solution is.
