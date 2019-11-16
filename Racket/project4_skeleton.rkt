@@ -330,17 +330,14 @@
             (values val sto))]
       [(NumExp? exp) (values (NumV (NumExp-num exp)) sto)]
       [(LambdaExp? exp)
-           (values (NumV 101)   ;;; CHANGE #1
-                    sto)]
+           (values (ClosureV (LambdaExp-formal exp) (LambdaExp-body exp) env cenv) sto)]
       [(ApplyExp? exp)
           (let*-values 
                ([(v1 sto1) (interp (ApplyExp-fun exp) env cenv sto)]
                 [(v2 sto2) (interp (ApplyExp-arg exp) env cenv sto1)])
             (if (ClosureV? v1)
                (let ([loc (new-loc!)])
-                   (interp 
-                      (NumExp 102) env cenv sto  ;;; CHANGE #2
-                    ))
+                   interp  (ClosureV-body v1) (loc(extend-dict (ClosureV-formal v1) v2 env)) cenv (v2 (extend-dict loc v1 env)))
                (display "non-function applied\n")))]
       [(LetExp? exp)
           (interp 
