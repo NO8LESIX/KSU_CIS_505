@@ -1,0 +1,306 @@
+<html>
+  <head>
+    <title>CIS 505/705 Project #4</title>
+  </head>
+
+  <body>
+    <h1>CIS 505/705, (Introduction to) Programming Languages, Fall 2019.</h1>
+<h2>Project #4 (25 points). Due on Monday, November 18, 2019, 8am</h2>
+
+Use <em><a href="http://docs.racket-lang.org/guide/">Racket</a></em> to write an interpreter for the object-oriented functional language described in the text below.
+<p>
+The main techniques for doing so 
+<ul>
+<li>
+are mentioned in the slides <tt>MutationsInterpret</tt> (uploaded
+on Canvas), and 
+<li>
+are also mentioned in
+<a href="http://cs.brown.edu/courses/cs173/2012/book/mut-struct-vs-var.html">Chapter 8</a> (in particular Section 8.1) of the textbook.
+</ul>
+The expected benefits are that you will understand how 
+the judicious use of environments and stores 
+makes it possible 
+to model a language that allows
+statically scoped functions as well as mutable objects.
+
+<h3>Language Syntax</h3>
+<em>Expressions</em> are given by the syntax
+<pre>
+exp ::= id
+     |  num
+     |  "lambda" id exp0
+     |  "apply" exp1 exp2
+     |  "let" id exp1 exp0
+     |  "let" "_" exp1 exp2
+     |  "cond" exp0 exp1 exp2
+     |  op exp1 exp2
+     |  "letclass" id fields ":" exp0 
+     |  "new" id
+     |  "get" id exp1
+     |  "set" id exp1 exp2
+
+fields ::= id
+        |  id fields
+
+ op ::= "+"
+     |  "-"
+     |  "*"
+
+</pre>
+That is, an expression can be 
+<ul>
+<li>
+an identifier (a sequence
+of one or more letters or digits that does not form a keyword
+and where the first element is a letter)
+<li>
+a non-negative integer (a sequence of digits)
+<li>
+a function definition
+<li>
+a function application 
+<li>
+a local definition <tt>let</tt> <i>x</i> <i>e1</i> <i>e0</i> 
+which evaluates <i>e1</i>, stores the result 
+in a new location denoted by <i>x</i>, and then 
+evaluates <i>e0</i>
+<li>
+a sequential composition <tt>let</tt> <i>_</i> <i>e1</i> <i>e2</i> 
+which evaluates <i>e1</i> but only for its effect 
+on the store (not for its value),
+and then evaluates <i>e2</i>
+<li>
+a conditional (positive integers are considered <tt>true</tt>, all other values
+are considered <tt>false</tt>)
+<li>
+an application of an arithmetic operator, using prefix notation
+(as in Project #3)
+<li>
+a local class definition 
+<tt>letclass</tt> <i>C</i> <i>f1,f2... fn</i> <tt>:</tt> <i>e0</i>
+(with <i>n</i> &gt; 0)
+where inside <i>e0</i> it is possible to refer to <i>C</i>
+so as to create objects with fields <i>f1,f2..fn</i>
+<li>
+an object creation <tt>new</tt> <i>C</i>
+that creates a fresh object with field names given by
+the definition of <i>C</i>
+<li>
+a field reference <tt>get</tt> <i>f e1</i> 
+that retrieves the value
+of field <i>f</i> in the object that <i>e1</i> evaluates to
+<li>
+a field update <tt>set</tt> <i>f e1 e2</i> that
+in the object that <i>e1</i> evaluates to
+sets the field <i>f</i> to the value of <i>e2</i>.
+</ul>
+
+<h3>Language Semantics</h3>
+As described in the background material (and as done in Project #2), 
+we shall use <em>locations</em>
+to &quot;mediate&quot; between identifiers and values;
+for that purpose, we employ
+<ul>
+<li>
+<em>environments</em> that binds identifiers
+(introduced by <tt>let</tt> or <tt>lambda</tt>), and also fields, to locations
+<li>
+<em>class environments</em> that binds identifiers
+introduced by <tt>letclass</tt> to lists of field names
+<li>
+<em>stores</em> that binds locations to values (there is no default value;
+it is an error to access a location which has not yet been given a value).
+</ul>
+Expressions are evaluated (using call-by-value) as follows:
+<ul>
+<li>
+given an environment, a class environement, and a store
+<li>
+evaluation returns a value, <em>and</em> a potentially updated store.
+</ul>
+There are 3 kinds of <em>values</em>:
+<ul>
+<li>
+integers (the program must ultimately return a such)
+<li>
+function closures (as in Project #3,
+so as to implement static scope)
+<li>
+objects (represented as &quot;local&quot; 
+environments that bind field names to locations).
+</ul>
+
+<h3>Examples</h3>
+We can do simple arithmetic and conditionals:
+<pre>
+  (run "* + 8 4 - 5 1")
+</pre>
+should return 48.
+<pre>
+  (run "cond - 9 8 
+          cond - 7 7
+            1 
+            cond - 5 6
+              2 
+              cond lambda w w 
+                3 
+                4 
+          5")
+</pre>
+should return 4 (since the only true values are the positive integers).
+<p>
+We can (as in Project #3) define and use (higher-order) functions:
+<pre>
+  (run "apply
+          lambda w * w w
+          7")
+</pre>
+should return 49,
+<pre>
+  (run "let z 7 
+        * 8 z")
+</pre>
+should return 56, and
+<pre>
+  (run "let twice lambda g lambda x apply g apply g x
+        let addfour lambda z + z 4
+          apply apply twice addfour 2")
+</pre>
+should return 10.
+<p>
+We can create objects, write their fields, and subsequently read those fields:
+<pre>
+  (run "letclass C a :
+        let x new C
+        let y new C
+        let _ set a x 33 
+        let _ set a y 44
+      + get a x 
+        get a y")
+</pre>
+should return 77
+(which confirms that the the <tt>a</tt> field in <tt>x</tt>
+differs from the <tt>a</tt> field in <tt>y</tt>). 
+<p>
+As on the slides, we can define counters; in the proper way:
+<pre>
+ (run "letclass Counter count :
+        let loc new Counter
+        let _ set count loc 0
+        let fresh 
+           lambda void 
+             let _ set count loc 
+                       + 1 get count loc
+             get count loc
+      + apply fresh 37 
+        apply fresh 37")
+</pre>
+which should return 1 + 2 = 3, and in a flawed way:
+<pre>
+  (run "letclass Counter count :
+        let fresh 
+           lambda void
+             let loc new Counter
+             let _ set count loc 0 
+             let _ set count loc 
+                       + 1 get count loc 
+             get count loc
+        + apply fresh 37 
+          apply fresh 37")
+</pre>
+which should return 1 + 1 = 2.
+<p>
+We can create objects with more than one field:
+<pre>
+  (run "letclass AB a b :
+        let w new AB
+        let _ set b w 22 
+        let _ set a w 66
+       + get a w 
+         get b w")
+</pre>
+should return 88.
+<p>
+We can check that evaluation is left-to-right:
+<pre>
+  (run "letclass A a :
+        let z new A 
+        let _ set a z 1
+         + let _ set a z 5
+              get a z
+           let _ set a z 
+                     + get a z 2
+              apply lambda y * y 3 
+                    get a z")
+</pre>
+should return 5 + 7 x 3 = 26
+(but if evaluation was right-to-left it would return
+5 + 3 x 3 = 14).
+<p>
+Fields can be bound to functions (methods):
+<pre>
+  (run "letclass N n add :
+        let w new N
+        let _ set n w 7
+        let _ set add w 
+                  lambda x set n w 
+                               + x get n w
+        let _ apply get add w 4 
+        let _ apply get add w 5
+         get n w")
+</pre>
+should return 16
+(since <tt>add</tt> is bound to a method that given <i>x</i>
+increases the <tt>n</tt> field by <i>x</i>).
+<p>
+
+<h3>Functionality of Interpreter</h3>
+You must write a Racket program,
+using the skeleton provided (which includes a parser)
+that evaluates programs in the given language.
+<p>
+Your program should be such that if you put it in a file <tt>ObjFun.rkt</tt>,
+in the top area of DrRacket type
+<pre>
+#lang racket
+(require "ObjFun.rkt")
+</pre>
+ and in the bottom area type
+<pre>
+  (run "&lt;text of program&gt;")
+</pre>
+then the value of that program will be output. 
+<p>
+
+<h4>Error Messages</h3>
+Your interpreter should give suitable error messages.
+Some of the possible semantic errors are to access 
+the field of a non-object
+as in &quot;<tt>get a 0</tt>&quot;,
+or to <tt>get</tt> a field that has not yet been <tt>set</tt>,
+but there are several more!
+<p>
+As long as your interpreter reports a given error, you are <em>not</em> 
+required to ensure that it then terminates properly without further error messages.
+<p>
+<h3>Submission</h3>
+You must do this exercise on your own.
+<p>
+Submit to Canvas 
+<em>one</em> file which should contain your Racket interpreter.
+<p>
+Do <em>not</em> 
+expect the instructor or the TAs to answer any questions after Friday, November 15, at 4pm.
+<p>
+<b>Important</b>:
+It is certainly OK to discuss the assignment with 
+the instructor, TAs, or your fellow students, 
+but all the coding must be typed by you,
+and all the concepts in the coding must be stored in your head so that 
+you can reproduce them on demand.
+    <hr>
+    <address>Torben Amtoft</address>
+  </body>
+</html>
+
