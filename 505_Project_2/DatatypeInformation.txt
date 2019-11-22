@@ -1,0 +1,98 @@
+//Parser for proj2
+type Id = string
+type Num = int
+datatype Exp
+  = AddE of Exp * Exp
+  | GetE of Left
+  | MulE of Exp * Exp
+  | NumE of int
+  | SubE of Exp * Exp
+datatype Left = LocOf of string * Exp list
+datatype Comm
+  = AssignC of Left * Exp
+  | IfC of Exp * Comm * Comm
+  | InputC of Left
+  | OutputC of Exp
+  | SeqC of Comm * Comm
+  | SkipC
+  | WhileC of Exp * Comm
+type Decl = (Id * Num list) list
+datatype Prog = ErrorP of string | ProgP of (string * int list) list * Comm
+datatype Token
+  = CommaT
+  | EqualT
+  | IdT of string
+  | IfT
+  | InputT
+  | LcurlyT
+  | LparenT
+  | LsquareT
+  | MinusT
+  | NumT of int
+  | OutputT
+  | PlusT
+  | RcurlyT
+  | RparenT
+  | RsquareT
+  | SemicT
+  | SkipT
+  | TimesT
+  | VarT
+  | WhileT
+val print_token = fn : Token -> string
+val is_digit = fn : char -> bool
+val char2digit = fn : char -> int
+val is_letter = fn : char -> bool
+val scanNum = fn : char list -> int * char list
+val scanId = fn : char list -> string * char list
+val scan = fn : char list -> Token list
+exception SyntaxError of string
+val expectToken = fn : Token * Token list -> Token list
+val getIdT = fn : Token list -> string * Token list
+val getNumT = fn : Token list -> int * Token list
+val parseNumList = fn : Token list -> int list * Token list
+val parseExp = fn : Token list -> Exp * Token list
+val parseExpList = fn : Token list -> Exp list * Token list
+val parseLeft = fn : Token list -> Left * Token list
+val parse1Comm = fn : Token list -> Comm * Token list
+val parseComm = fn : Token list -> Comm * Token list
+val parseDecl = fn : Token list -> (string * int list) list * Token list
+val parseProg = fn : Token list -> Prog * Token list
+val parse = fn : string -> Prog
+val it = () : unit
+//End Parser
+
+//Project2 Skeleton
+exception NotDeclared of string
+exception BoundsError of string
+exception ArrayDiscrepancy of string
+exception InputExhausted
+exception ArrayRefOutOfBounds of string * int * int
+type Loc = int
+type Value = int
+type Env = Id -> Loc * Num list
+val InitEnv = fn : string -> 'a
+val EnvInsert = fn : ''a -> 'b * 'c -> (''a -> 'b * 'c) -> ''a -> 'b * 'c
+val EnvLookup = fn : ('a -> 'b) -> 'a -> 'b
+type Store = Loc -> Value
+val InitSto = fn : 'a -> int
+val StoUpdate = fn : ''a -> 'b -> (''a -> 'b) -> ''a -> 'b
+val StoLookup = fn : ('a -> 'b) -> 'a -> 'b
+val calculate_displacement = fn : string -> int list -> int list -> int
+val ExpEval = fn : Exp -> (Id -> int * int list) -> (int -> Num) -> int
+val LeftEval = fn : Left -> (Id -> int * int list) -> (int -> Num) -> int
+val DeclExec = fn
+  : (string * int list) list
+    -> (string -> int * int list) * int -> (string -> int * int list) * int
+type InputStream = Num list
+type OutputStream = Value list
+type RunTimeState = Store * InputStream * OutputStream
+val CommExec = fn
+  : Comm
+    -> (Id -> int * int list)
+       -> (int -> Num) * Num list * int list
+          -> (int -> Num) * Num list * int list
+val ProgRun = fn : Prog -> Num list -> int list
+val Interpret = fn : string -> Num list -> int list
+val it = () : unit
+//End of Project2 Skeleton

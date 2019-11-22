@@ -1,0 +1,84 @@
+(* below are some code snippets 
+     that could be filled in at the various holes in the skeleton *)
+
+(*  #1  how to evaluate a number *)
+
+fun ExpEval (NumE n) _ _ = n
+
+(*  #2  how to execute a sequence of commands
+       (make sure it is in the right order, and that each command has an effect)
+*)
+
+|   CommExec (SeqC(cmd1,cmd2)) env state =
+      let val state1 = CommExec cmd1 env state
+          val state2 = CommExec cmd2 env state1
+       in state2 end
+
+(*  #3  how to handle an assignment
+       (observe that LeftEval computes a location)
+*)
+
+|   CommExec (AssignC(lhs, rhs)) env (sto,inp,outp) =
+        (StoUpdate 
+            (LeftEval lhs env sto)
+            (ExpEval rhs env sto) 
+             sto, 
+         inp, outp)
+
+(*  #4  think about which runtime-errors there can be, 
+        and add suitable exception declarations
+*)
+
+exception InputExhausted  
+exception ArrayRefOutOfBounds of string * int * int
+
+(* #5  handle those exceptions you added in #4
+       (you may need to adjust #4 and #5 along the way)
+*)
+
+   | InputExhausted =>
+         (print ("*** error: input stream prematurely exhausted\n"); [0])
+   | (ArrayRefOutOfBounds(x,i,n)) =>
+         (print ("*** error: array "^x^" used with index "^(Int.toString i)^" but allowed range is 0.."^(Int.toString (n-1))^"\n"); [0])
+
+(* #6  how to read from the input stream *)
+
+|   CommExec (InputC lhs) env (sto,inp,outp) =
+      (case inp of
+          [] => raise InputExhausted
+        | (v :: inp') => 
+            (StoUpdate (LeftEval lhs env sto) v sto, 
+             inp', outp))
+
+(* #7  how to execute an "if" conditional 
+       (remember which integers are considered 'true')
+*)
+
+|   CommExec (IfC(exp,cmd1,cmd2)) env (state as (sto,_,_)) =
+      let val v = ExpEval exp env sto
+       in if v > 0
+          then CommExec cmd1 env state
+          else CommExec cmd2 env state
+      end
+
+(* #8  how to execute a "while" loop
+       (hint: the question text mentions an equivalent command)
+*)
+
+|   CommExec (WhileC(exp,cmd)) env state =
+      CommExec (IfC(exp,SeqC(cmd,WhileC(exp,cmd)),SkipC)) env state
+
+(* #9  how to calculate the 'displacement', that is how far a given array element
+        is located from the start of the array
+       (the current code works only for 1-dimensional arrays,
+         and doesn't catch out-of-bounds errors).
+*)
+
+fun calculate_displacement id indices bounds = case (indices, bounds) of
+   ([],[]) => 0
+ | ((index1 :: indices'), (bound1 :: bounds')) =>
+     (if index1 >=0 andalso index1 < bound1
+      then index1 * (foldr op* 1 bounds') + 
+            (calculate_displacement id indices' bounds')
+      else raise (ArrayRefOutOfBounds (id, index1, bound1)))
+ | _ => raise (ArrayDiscrepancy id)
